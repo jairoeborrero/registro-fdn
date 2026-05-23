@@ -322,13 +322,12 @@ var API = 'https://script.google.com/macros/s/AKfycbw2LHa64hxeOvttsoGzFBgUnssXXj
 var scannerUUID = null, scannerCharla = null, scannerIngreso = null;
 var charlaActiva = null, asistentesCharla = [], tipoReporte = 'asist';
 
-// ── API ───────────────────────────────────────────────
-function get(params) {
-  var qs = Object.keys(params).map(function(k){ return k+'='+encodeURIComponent(params[k]); }).join('&');
+// ── API (solo GET para evitar CORS) ──────────────────
+function api(params) {
+  var qs = Object.keys(params).map(function(k){
+    return k+'='+encodeURIComponent(typeof params[k]==='object' ? JSON.stringify(params[k]) : params[k]);
+  }).join('&');
   return fetch(API+'?'+qs).then(function(r){ return r.json(); });
-}
-function post(body) {
-  return fetch(API, { method:'POST', body: JSON.stringify(body) }).then(function(r){ return r.json(); });
 }
 
 // ── NAV ──────────────────────────────────────────────
@@ -434,7 +433,7 @@ function cargarResumen() {
   var dias=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
   var meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   document.getElementById('fecha-hoy').textContent = dias[hoy.getDay()]+', '+hoy.getDate()+' de '+meses[hoy.getMonth()]+' '+hoy.getFullYear();
-  get({accion:'resumen'}).then(function(r){
+  api({accion:'resumen'}).then(function(r){
     document.getElementById('st-charla').textContent = r.asistenciaHoy;
     document.getElementById('st-planta').textContent = r.enPlanta;
     document.getElementById('st-ingresos').textContent = r.ingresosHoy;
@@ -450,7 +449,7 @@ function buscarUUID() {
   var res = document.getElementById('uuid-results');
   if (txt.length < 2) { res.innerHTML='<div class="scan-err">Escribe al menos 2 caracteres</div>'; return; }
   res.innerHTML='<div class="scan-info">Buscando...</div>';
-  get({accion:'buscarTrabajadores', texto:txt}).then(function(lista){
+  api({accion:'buscarTrabajadores', texto:txt}).then(function(lista){
     if (!lista.length) { res.innerHTML='<div class="scan-err">Sin resultados para "'+txt+'"</div>'; return; }
     res.innerHTML = lista.map(function(w){
       var tieneUUID = w.uuid && w.uuid.toString().trim()!=='';
@@ -479,7 +478,7 @@ function seleccionarUUID(wJson) {
 function procesarUUID(uuid) {
   var res = document.getElementById('uuid-resultado');
   res.innerHTML = '<div class="scan-info">Guardando...</div>';
-  post({accion:'asignarUUID', fila:trabajadorUUID.fila, uuid:uuid}).then(function(r){
+  api({accion:'asignarUUID', fila:trabajadorUUID.fila, uuid:uuid}).then(function(r){
     if (r.ok) {
       res.innerHTML = '<div class="scan-ok">✓ QR asignado a <b>'+trabajadorUUID.nombres+' '+trabajadorUUID.apellidos+'</b></div>';
       toast('QR guardado correctamente');
@@ -504,7 +503,7 @@ function crearCharla() {
   var inst = document.getElementById('c-instructor').value.trim();
   if (!tema) { toast('Ingresa el tema'); return; }
   if (!inst) { toast('Ingresa el instructor'); return; }
-  post({accion:'crearCharla', datos:{
+  api({accion:'crearCharla', datos:{
     tipo: document.getElementById('c-tipo').value,
     tema: tema,
     duracion: document.getElementById('c-duracion').value,
@@ -526,7 +525,7 @@ function crearCharla() {
 function cargarCharlasHoy() {
   var el = document.getElementById('charlas-hoy-lista');
   el.innerHTML = '<div class="scan-info">Cargando...</div>';
-  get({accion:'getCharlaHoy'}).then(function(charlas){
+  api({accion:'getCharlaHoy'}).then(function(charlas){
     if (!charlas.length) { el.innerHTML='<div class="empty">No hay charlas hoy</div>'; return; }
     el.innerHTML = charlas.map(function(c){
       return '<div class="worker-card" style="cursor:pointer" onclick=\'abrirCharlaExistente('+JSON.stringify(JSON.stringify(c))+')\'>'+
@@ -539,7 +538,7 @@ function cargarCharlasHoy() {
 
 function abrirCharlaExistente(cJson) {
   var c = JSON.parse(cJson); charlaActiva = c;
-  get({accion:'getAsistentes', idCharla:c.id}).then(function(lista){
+  api({accion:'getAsistentes', idCharla:c.id}).then(function(lista){
     asistentesCharla = lista; mostrarPaso2Charla();
   }).catch(function(){ asistentesCharla=[]; mostrarPaso2Charla(); });
 }
@@ -574,7 +573,7 @@ function tabAsistencia(tab) {
 function procesarQRCharla(uuid) {
   var res = document.getElementById('charla-qr-res');
   res.innerHTML='<div class="scan-info">Buscando trabajador...</div>';
-  get({accion:'buscarPorUUID', uuid:uuid}).then(function(w){
+  api({accion:'buscarPorUUID', uuid:uuid}).then(function(w){
     if (!w) { res.innerHTML='<div class="scan-err">✗ QR no reconocido. Regístralo primero en la pestaña QR.</div>'; return; }
     hacerAsistencia(w,'QR',res);
   }).catch(function(){ res.innerHTML='<div class="scan-err">Error de conexión</div>'; });
@@ -585,7 +584,7 @@ function buscarParaCharla() {
   var res = document.getElementById('charla-search-res');
   if (txt.length<2) return;
   res.innerHTML='<div class="scan-info">Buscando...</div>';
-  get({accion:'buscarTrabajadores', texto:txt}).then(function(lista){
+  api({accion:'buscarTrabajadores', texto:txt}).then(function(lista){
     if (!lista.length) { res.innerHTML='<div class="scan-err">Sin resultados</div>'; return; }
     res.innerHTML = lista.map(function(w){
       return '<div class="result-item" onclick=\'hacerAsistencia('+JSON.stringify(JSON.stringify(w))+',\'MANUAL\',null)\'>'+
@@ -599,7 +598,7 @@ function hacerAsistencia(w, metodo, resEl) {
   if (typeof w==='string') w=JSON.parse(w);
   var el = resEl || document.getElementById('charla-search-res');
   el.innerHTML='<div class="scan-info">Registrando...</div>';
-  post({accion:'registrarAsistencia', idCharla:charlaActiva.id, trabajador:w, metodo:metodo}).then(function(r){
+  api({accion:'registrarAsistencia', idCharla:charlaActiva.id, trabajador:w, metodo:metodo}).then(function(r){
     if (r.ok) {
       asistentesCharla.push({nombres:w.nombres,apellidos:w.apellidos,cargo:w.cargo,empresa:w.empresa,hora:r.hora,metodo:metodo});
       renderAsistentes();
@@ -637,7 +636,7 @@ function tabIngreso(tab) {
 function procesarQRIngreso(uuid) {
   var res = document.getElementById('ing-qr-res');
   res.innerHTML='<div class="scan-info">Buscando...</div>';
-  get({accion:'buscarPorUUID', uuid:uuid}).then(function(w){
+  api({accion:'buscarPorUUID', uuid:uuid}).then(function(w){
     if (!w) { res.innerHTML='<div class="scan-err">✗ QR no reconocido.</div>'; return; }
     hacerIngreso(w,'QR',res);
   }).catch(function(){ res.innerHTML='<div class="scan-err">Error de conexión</div>'; });
@@ -648,7 +647,7 @@ function buscarParaIngreso() {
   var res = document.getElementById('ing-nom-res');
   if (txt.length<2) return;
   res.innerHTML='<div class="scan-info">Buscando...</div>';
-  get({accion:'buscarTrabajadores', texto:txt}).then(function(lista){
+  api({accion:'buscarTrabajadores', texto:txt}).then(function(lista){
     if (!lista.length) { res.innerHTML='<div class="scan-err">Sin resultados</div>'; return; }
     res.innerHTML = lista.map(function(w){
       return '<div class="result-item" onclick=\'hacerIngreso('+JSON.stringify(JSON.stringify(w))+',\'MANUAL\',null)\'>'+
@@ -662,7 +661,7 @@ function hacerIngreso(w, metodo, resEl) {
   if (typeof w==='string') w=JSON.parse(w);
   var el = resEl || document.getElementById('ing-nom-res');
   el.innerHTML='<div class="scan-info">Registrando...</div>';
-  post({accion:'registrarIngreso', trabajador:w, metodo:metodo}).then(function(r){
+  api({accion:'registrarIngreso', trabajador:w, metodo:metodo}).then(function(r){
     if (r.ok) {
       var esIng = r.tipo==='INGRESO';
       el.innerHTML='<div class="'+(esIng?'scan-ok':'scan-info')+'">'+(esIng?'→':'←')+' <b>'+r.tipo+'</b>: '+r.nombre+' · '+r.hora+'</div>';
@@ -678,7 +677,7 @@ function hacerIngreso(w, metodo, resEl) {
 function cargarRegistrosHoy() {
   var el = document.getElementById('lista-ingresos');
   el.innerHTML='<div class="scan-info">Cargando...</div>';
-  get({accion:'getRegistrosHoy'}).then(function(lista){
+  api({accion:'getRegistrosHoy'}).then(function(lista){
     if (!lista.length) { el.innerHTML='<div class="empty">Sin registros hoy</div>'; return; }
     el.innerHTML = lista.slice().reverse().map(function(r){
       var enPlanta = !r.salida||r.salida.toString().trim()==='';
@@ -717,7 +716,7 @@ function generarReporte() {
   res.innerHTML='<div class="scan-info">Cargando...</div>';
   var d=isoToDMY(desde), h=isoToDMY(hasta);
   var accion = tipoReporte==='asist'?'getReporteAsistencia':'getReporteIngresos';
-  get({accion:accion, desde:d, hasta:h}).then(function(datos){
+  api({accion:accion, desde:d, hasta:h}).then(function(datos){
     if (!datos.length) { res.innerHTML='<div class="empty">Sin registros en ese período</div>'; return; }
     var html='<div class="card"><div class="card-title">'+(tipoReporte==='asist'?'Asistencia':'Ingresos')+' · '+datos.length+' registros</div>';
     if (tipoReporte==='asist') {
