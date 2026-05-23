@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Registro FDN</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:Arial,sans-serif;background:#f0f4f8;color:#1a2332;min-height:100vh;padding-bottom:72px;font-size:14px}
+:root{--azul:#1F4E79;--azul2:#2E75B6;--verde:#1a7a4a;--rojo:#c0392b;--naranja:#d68910;--gris:#6c757d;--border:#dde3ea}
+
+.header{background:var(--azul);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.header-logo{width:30px;height:30px;background:rgba(255,255,255,.15);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.header h1{font-size:16px;font-weight:700;margin:0}
+.header-sub{font-size:11px;opacity:.7;margin-top:1px}
+
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);display:flex;z-index:100;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 6px;cursor:pointer;border:none;background:none;color:var(--gris);font-size:9px;gap:3px}
+.nav-btn.active{color:var(--azul)}
+.nav-btn svg{width:20px;height:20px;stroke-width:2;fill:none;stroke:currentColor}
+
+.screen{display:none;padding:14px}
+.screen.active{display:block}
+
+.card{background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.card-title{font-size:12px;font-weight:700;color:var(--azul);margin-bottom:10px;text-transform:uppercase;letter-spacing:.3px}
+
+label{display:block;font-size:12px;color:var(--gris);margin-bottom:3px;font-weight:600}
+input,select,textarea{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;background:#fff;color:#1a2332;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--azul2)}
+textarea{resize:vertical;min-height:65px}
+.field{margin-bottom:10px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 14px;border-radius:9px;font-size:13px;font-weight:700;border:none;cursor:pointer;width:100%;margin-bottom:6px;line-height:1.2}
+.btn:active{opacity:.8}
+.btn svg{width:17px;height:17px;stroke-width:2;fill:none;stroke:currentColor;flex-shrink:0}
+.btn-primary{background:var(--azul);color:#fff}
+.btn-green{background:var(--verde);color:#fff}
+.btn-red{background:var(--rojo);color:#fff}
+.btn-outline{background:#fff;color:var(--azul);border:2px solid var(--azul)}
+.btn-sm{padding:6px 10px;font-size:11px;width:auto;margin:0}
+.btn-row{display:flex;gap:8px}
+.btn-row .btn{margin:0}
+
+/* Scanner */
+.scanner-wrap{position:relative;width:100%;background:#000;border-radius:10px;overflow:hidden;margin-bottom:10px}
+.scanner-wrap video{width:100%!important;display:block}
+#qr-charla-reader,#qr-ingreso-reader,#qr-uuid-reader{width:100%}
+.scanner-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.scanner-frame{width:200px;height:200px;border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)}
+
+.scan-ok{background:#d4edda;border:1px solid #a3d9b1;color:#155724;padding:10px 12px;border-radius:8px;margin-top:8px;font-size:13px}
+.scan-err{background:#f8d7da;border:1px solid #f5c6cb;color:#721c24;padding:10px 12px;border-radius:8px;margin-top:8px;font-size:13px}
+.scan-info{background:#d1ecf1;border:1px solid #bee5eb;color:#0c5460;padding:10px 12px;border-radius:8px;margin-top:8px;font-size:13px}
+
+.worker-card{background:#f8fbff;border:1.5px solid var(--azul2);border-radius:10px;padding:11px;margin-bottom:10px}
+.worker-name{font-size:15px;font-weight:700;color:var(--azul)}
+.worker-sub{font-size:12px;color:var(--gris);margin-top:2px}
+.badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:700;margin-top:4px}
+.badge-qr{background:#e8f4fd;color:var(--azul2)}
+.badge-manual{background:#fef9e7;color:var(--naranja)}
+.badge-ok{background:#d4edda;color:var(--verde)}
+.badge-warn{background:#fff3cd;color:#856404}
+.badge-in{background:#d4edda;color:var(--verde)}
+
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat-card{background:#fff;border-radius:12px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.stat-num{font-size:26px;font-weight:700;color:var(--azul)}
+.stat-label{font-size:11px;color:var(--gris);margin-top:2px;line-height:1.3}
+
+.list-item{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border)}
+.list-item:last-child{border:none;padding-bottom:0}
+.list-name{font-size:13px;font-weight:700}
+.list-sub{font-size:11px;color:var(--gris);margin-top:1px}
+.list-right{text-align:right;font-size:12px;flex-shrink:0;margin-left:8px}
+
+.result-item{padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:5px;cursor:pointer}
+.result-item:active{border-color:var(--azul2);background:#f0f7ff}
+.result-item .rname{font-size:13px;font-weight:700}
+.result-item .rsub{font-size:11px;color:var(--gris);margin-top:1px}
+
+.tab-row{display:flex;gap:6px;margin-bottom:12px}
+.tab{flex:1;padding:8px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:12px;font-weight:700;cursor:pointer;text-align:center;color:var(--gris)}
+.tab.active{background:var(--azul);color:#fff;border-color:var(--azul)}
+
+.stitle{font-size:17px;font-weight:700;color:var(--azul);margin-bottom:3px;margin-top:2px}
+.ssub{font-size:12px;color:var(--gris);margin-bottom:12px}
+
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(10px);background:#1a2332;color:#fff;padding:9px 18px;border-radius:24px;font-size:13px;opacity:0;transition:all .25s;z-index:999;max-width:88%;text-align:center;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.empty{text-align:center;padding:24px 16px;color:var(--gris);font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">FDN</div>
+  <div>
+    <h1 id="header-title">Registro FDN</h1>
+    <div class="header-sub">Fruta del Norte · COURIER</div>
+  </div>
+</div>
+
+<!-- INICIO -->
+<div class="screen active" id="screen-inicio">
+  <div class="stitle">Resumen del día</div>
+  <div class="ssub" id="fecha-hoy">Cargando...</div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="st-charla">—</div><div class="stat-label">En charla hoy</div></div>
+    <div class="stat-card"><div class="stat-num" id="st-planta">—</div><div class="stat-label">En planta ahora</div></div>
+    <div class="stat-card"><div class="stat-num" id="st-ingresos">—</div><div class="stat-label">Ingresos hoy</div></div>
+    <div class="stat-card"><div class="stat-num" id="st-charlas">—</div><div class="stat-label">Charlas hoy</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Acceso rápido</div>
+    <button class="btn btn-primary" onclick="goScreen('charla')">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Charla de seguridad
+    </button>
+    <button class="btn btn-green" onclick="goScreen('ingreso')">
+      <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      Ingreso / Salida
+    </button>
+    <button class="btn btn-outline" onclick="goScreen('uuid')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M17 14h.01M20 14h.01M14 17h.01M17 17h.01M20 17h.01M17 20h.01M20 20h.01"/></svg>
+      Registrar QR de trabajadores
+    </button>
+  </div>
+</div>
+
+<!-- UUID -->
+<div class="screen" id="screen-uuid">
+  <div class="stitle">Registrar QR</div>
+  <div class="ssub">Vincula la tarjeta de cada trabajador a su nombre</div>
+
+  <div class="card">
+    <div class="card-title">1 · Buscar trabajador</div>
+    <div class="field">
+      <label>Nombre o cédula</label>
+      <input type="text" id="uuid-search" placeholder="Ej: Erazo o 1103949853" autocomplete="off">
+    </div>
+    <button class="btn btn-primary" onclick="buscarUUID()">Buscar</button>
+    <div id="uuid-results"></div>
+  </div>
+
+  <div id="uuid-sec2" style="display:none">
+    <div class="worker-card" id="uuid-worker"></div>
+    <div class="card">
+      <div class="card-title">2 · Escanear tarjeta QR</div>
+      <button class="btn btn-primary" id="btn-uuid-scan" onclick="abrirScannerUUID()">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Abrir cámara
+      </button>
+      <div id="uuid-scanner-wrap" style="display:none">
+        <div class="scanner-wrap">
+          <div id="qr-uuid-reader"></div>
+          <div class="scanner-overlay"><div class="scanner-frame"></div></div>
+        </div>
+        <button class="btn btn-red" onclick="cerrarScannerUUID()">✕ Cerrar cámara</button>
+      </div>
+      <div id="uuid-resultado"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHARLA -->
+<div class="screen" id="screen-charla">
+  <div class="stitle">Charla de seguridad</div>
+  <div class="ssub">Crea la charla y registra asistentes</div>
+
+  <div id="charla-p1">
+    <div class="tab-row">
+      <div class="tab active" id="tab-nueva" onclick="tabCharla('nueva')">Nueva charla</div>
+      <div class="tab" id="tab-hoy" onclick="tabCharla('hoy')">Charlas de hoy</div>
+    </div>
+    <div id="charla-form" class="card">
+      <div class="card-title">Datos de la charla</div>
+      <div class="field"><label>Tipo</label>
+        <select id="c-tipo"><option>Charla pre-jornada</option><option>Capacitación</option><option>Inducción</option><option>Otro</option></select>
+      </div>
+      <div class="field"><label>Tema</label><input type="text" id="c-tema" placeholder="Ej: Uso correcto de EPP"></div>
+      <div class="field"><label>Duración (minutos)</label><input type="number" id="c-duracion" placeholder="30" min="1"></div>
+      <div class="field"><label>Lugar</label><input type="text" id="c-lugar" placeholder="Ej: Sala de reuniones"></div>
+      <div class="field"><label>Instructor</label><input type="text" id="c-instructor" placeholder="Nombre completo"></div>
+      <div class="field"><label>Aspectos tratados</label><textarea id="c-aspectos" placeholder="Resumen de los temas abordados..."></textarea></div>
+      <button class="btn btn-primary" onclick="crearCharla()">Crear charla →</button>
+    </div>
+    <div id="charla-hoy-panel" style="display:none">
+      <div id="charlas-hoy-lista"></div>
+      <button class="btn btn-outline" onclick="cargarCharlasHoy()">↻ Actualizar</button>
+    </div>
+  </div>
+
+  <div id="charla-p2" style="display:none">
+    <div class="card" id="charla-info"></div>
+    <div class="tab-row">
+      <div class="tab active" id="tab-qr-c" onclick="tabAsistencia('qr')">Escanear QR</div>
+      <div class="tab" id="tab-nom-c" onclick="tabAsistencia('nom')">Buscar nombre</div>
+    </div>
+
+    <div id="asist-qr" class="card">
+      <div class="card-title">Escanear tarjeta del trabajador</div>
+      <button class="btn btn-primary" id="btn-charla-scan" onclick="abrirScannerCharla()">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Abrir cámara
+      </button>
+      <div id="charla-scanner-wrap" style="display:none">
+        <div class="scanner-wrap">
+          <div id="qr-charla-reader"></div>
+          <div class="scanner-overlay"><div class="scanner-frame"></div></div>
+        </div>
+        <button class="btn btn-red" onclick="cerrarScannerCharla()">✕ Cerrar cámara</button>
+      </div>
+      <div id="charla-qr-res"></div>
+    </div>
+
+    <div id="asist-nom" style="display:none" class="card">
+      <div class="card-title">Buscar por nombre o cédula</div>
+      <div class="field"><input type="text" id="charla-search" placeholder="Nombre o cédula..." autocomplete="off"></div>
+      <button class="btn btn-outline" style="margin-bottom:8px" onclick="buscarParaCharla()">Buscar</button>
+      <div id="charla-search-res"></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span class="card-title" style="margin:0">Asistentes <span id="cnt-asist" style="font-weight:400;color:var(--gris)">(0)</span></span>
+      </div>
+      <div id="lista-asistentes"><div class="empty">Nadie registrado aún</div></div>
+    </div>
+    <button class="btn btn-outline" onclick="volverCharla()">← Volver</button>
+  </div>
+</div>
+
+<!-- INGRESO -->
+<div class="screen" id="screen-ingreso">
+  <div class="stitle">Ingreso / Salida</div>
+  <div class="ssub">1er escaneo = entrada · 2do = salida</div>
+
+  <div class="tab-row">
+    <div class="tab active" id="tab-qr-i" onclick="tabIngreso('qr')">Escanear QR</div>
+    <div class="tab" id="tab-nom-i" onclick="tabIngreso('nom')">Buscar nombre</div>
+  </div>
+
+  <div id="ing-qr" class="card">
+    <div class="card-title">Escanear tarjeta</div>
+    <button class="btn btn-green" id="btn-ing-scan" onclick="abrirScannerIngreso()">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Abrir cámara
+    </button>
+    <div id="ing-scanner-wrap" style="display:none">
+      <div class="scanner-wrap">
+        <div id="qr-ingreso-reader"></div>
+        <div class="scanner-overlay"><div class="scanner-frame"></div></div>
+      </div>
+      <button class="btn btn-red" onclick="cerrarScannerIngreso()">✕ Cerrar cámara</button>
+    </div>
+    <div id="ing-qr-res"></div>
+  </div>
+
+  <div id="ing-nom" style="display:none" class="card">
+    <div class="card-title">Buscar por nombre o cédula</div>
+    <div class="field"><input type="text" id="ing-search" placeholder="Nombre o cédula..." autocomplete="off"></div>
+    <button class="btn btn-outline" style="margin-bottom:8px" onclick="buscarParaIngreso()">Buscar</button>
+    <div id="ing-nom-res"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span class="card-title" style="margin:0">Registros de hoy</span>
+      <button class="btn btn-outline btn-sm" onclick="cargarRegistrosHoy()">↻</button>
+    </div>
+    <div id="lista-ingresos"><div class="empty">Cargando...</div></div>
+  </div>
+</div>
+
+<!-- REPORTES -->
+<div class="screen" id="screen-reportes">
+  <div class="stitle">Reportes</div>
+  <div class="ssub">Consulta registros por fecha</div>
+  <div class="tab-row">
+    <div class="tab active" id="tab-ra" onclick="tabReporte('asist')">Asistencia</div>
+    <div class="tab" id="tab-ri" onclick="tabReporte('ing')">Ingresos</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Filtrar</div>
+    <div class="btn-row" style="margin-bottom:10px">
+      <div class="field" style="flex:1;margin:0"><label>Desde</label><input type="date" id="rep-desde"></div>
+      <div class="field" style="flex:1;margin:0"><label>Hasta</label><input type="date" id="rep-hasta"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="generarReporte()" style="flex:1;margin:0">Ver</button>
+      <button class="btn btn-outline" onclick="hoyReporte()" style="flex:1;margin:0">Solo hoy</button>
+    </div>
+  </div>
+  <div id="rep-resultado"></div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button class="nav-btn active" id="nav-inicio" onclick="goScreen('inicio')">
+    <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Inicio
+  </button>
+  <button class="nav-btn" id="nav-charla" onclick="goScreen('charla')">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Charla
+  </button>
+  <button class="nav-btn" id="nav-ingreso" onclick="goScreen('ingreso')">
+    <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Ingreso
+  </button>
+  <button class="nav-btn" id="nav-uuid" onclick="goScreen('uuid')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M17 14h.01M20 14h.01M14 17h.01M17 17h.01M20 17h.01M17 20h.01M20 20h.01"/></svg>QR
+  </button>
+  <button class="nav-btn" id="nav-reportes" onclick="goScreen('reportes')">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Reportes
+  </button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var API = 'https://script.google.com/macros/s/AKfycbw2LHa64hxeOvttsoGzFBgUnssXXj8i1Nve1WZH98tAxQSlN8yl4hRB-JemV9EvnTpMKg/exec';
+var scannerUUID = null, scannerCharla = null, scannerIngreso = null;
+var charlaActiva = null, asistentesCharla = [], tipoReporte = 'asist';
+
+// ── API ───────────────────────────────────────────────
+function get(params) {
+  var qs = Object.keys(params).map(function(k){ return k+'='+encodeURIComponent(params[k]); }).join('&');
+  return fetch(API+'?'+qs).then(function(r){ return r.json(); });
+}
+function post(body) {
+  return fetch(API, { method:'POST', body: JSON.stringify(body) }).then(function(r){ return r.json(); });
+}
+
+// ── NAV ──────────────────────────────────────────────
+function goScreen(name) {
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('screen-'+name).classList.add('active');
+  var nb = document.getElementById('nav-'+name);
+  if (nb) nb.classList.add('active');
+  var titles = {inicio:'Registro FDN',charla:'Charla de Seguridad',ingreso:'Ingreso / Salida',uuid:'Registrar QR',reportes:'Reportes'};
+  document.getElementById('header-title').textContent = titles[name]||'Registro FDN';
+  // cerrar cámaras al cambiar pantalla
+  cerrarTodos();
+  if (name==='inicio') cargarResumen();
+  if (name==='ingreso') cargarRegistrosHoy();
+}
+
+function toast(msg, ms) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, ms||2800);
+}
+
+// ── SCANNERS ──────────────────────────────────────────
+function cerrarTodos() {
+  cerrarScannerUUID(); cerrarScannerCharla(); cerrarScannerIngreso();
+}
+
+function iniciarScanner(elementId, callback) {
+  var scanner = new Html5Qrcode(elementId);
+  scanner.start(
+    { facingMode:'environment' },
+    { fps:10, qrbox:{width:220,height:220} },
+    function(text){ callback(text, scanner); },
+    function(){}
+  ).catch(function(e){ toast('Error de cámara: '+e); });
+  return scanner;
+}
+
+// UUID scanner
+function abrirScannerUUID() {
+  document.getElementById('btn-uuid-scan').style.display = 'none';
+  document.getElementById('uuid-scanner-wrap').style.display = 'block';
+  document.getElementById('uuid-resultado').innerHTML = '';
+  scannerUUID = iniciarScanner('qr-uuid-reader', function(text, sc) {
+    sc.stop(); scannerUUID = null;
+    document.getElementById('uuid-scanner-wrap').style.display = 'none';
+    document.getElementById('btn-uuid-scan').style.display = 'flex';
+    procesarUUID(text.trim().toUpperCase());
+  });
+}
+function cerrarScannerUUID() {
+  if (scannerUUID) { try{ scannerUUID.stop(); }catch(e){} scannerUUID=null; }
+  var w = document.getElementById('uuid-scanner-wrap');
+  var b = document.getElementById('btn-uuid-scan');
+  if (w) w.style.display='none';
+  if (b) b.style.display='flex';
+}
+
+// Charla scanner
+function abrirScannerCharla() {
+  document.getElementById('btn-charla-scan').style.display = 'none';
+  document.getElementById('charla-scanner-wrap').style.display = 'block';
+  document.getElementById('charla-qr-res').innerHTML = '';
+  scannerCharla = iniciarScanner('qr-charla-reader', function(text, sc) {
+    sc.stop(); scannerCharla = null;
+    document.getElementById('charla-scanner-wrap').style.display = 'none';
+    document.getElementById('btn-charla-scan').style.display = 'flex';
+    procesarQRCharla(text.trim().toUpperCase());
+  });
+}
+function cerrarScannerCharla() {
+  if (scannerCharla) { try{ scannerCharla.stop(); }catch(e){} scannerCharla=null; }
+  var w = document.getElementById('charla-scanner-wrap');
+  var b = document.getElementById('btn-charla-scan');
+  if (w) w.style.display='none';
+  if (b) b.style.display='flex';
+}
+
+// Ingreso scanner
+function abrirScannerIngreso() {
+  document.getElementById('btn-ing-scan').style.display = 'none';
+  document.getElementById('ing-scanner-wrap').style.display = 'block';
+  document.getElementById('ing-qr-res').innerHTML = '';
+  scannerIngreso = iniciarScanner('qr-ingreso-reader', function(text, sc) {
+    sc.stop(); scannerIngreso = null;
+    document.getElementById('ing-scanner-wrap').style.display = 'none';
+    document.getElementById('btn-ing-scan').style.display = 'flex';
+    procesarQRIngreso(text.trim().toUpperCase());
+  });
+}
+function cerrarScannerIngreso() {
+  if (scannerIngreso) { try{ scannerIngreso.stop(); }catch(e){} scannerIngreso=null; }
+  var w = document.getElementById('ing-scanner-wrap');
+  var b = document.getElementById('btn-ing-scan');
+  if (w) w.style.display='none';
+  if (b) b.style.display='flex';
+}
+
+// ── INICIO ────────────────────────────────────────────
+function cargarResumen() {
+  var hoy = new Date();
+  var dias=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  var meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  document.getElementById('fecha-hoy').textContent = dias[hoy.getDay()]+', '+hoy.getDate()+' de '+meses[hoy.getMonth()]+' '+hoy.getFullYear();
+  get({accion:'resumen'}).then(function(r){
+    document.getElementById('st-charla').textContent = r.asistenciaHoy;
+    document.getElementById('st-planta').textContent = r.enPlanta;
+    document.getElementById('st-ingresos').textContent = r.ingresosHoy;
+    document.getElementById('st-charlas').textContent = r.charlasHoy;
+  }).catch(function(e){ console.error(e); });
+}
+
+// ── UUID ──────────────────────────────────────────────
+var trabajadorUUID = null;
+
+function buscarUUID() {
+  var txt = document.getElementById('uuid-search').value.trim();
+  var res = document.getElementById('uuid-results');
+  if (txt.length < 2) { res.innerHTML='<div class="scan-err">Escribe al menos 2 caracteres</div>'; return; }
+  res.innerHTML='<div class="scan-info">Buscando...</div>';
+  get({accion:'buscarTrabajadores', texto:txt}).then(function(lista){
+    if (!lista.length) { res.innerHTML='<div class="scan-err">Sin resultados para "'+txt+'"</div>'; return; }
+    res.innerHTML = lista.map(function(w){
+      var tieneUUID = w.uuid && w.uuid.toString().trim()!=='';
+      return '<div class="result-item" onclick=\'seleccionarUUID('+JSON.stringify(JSON.stringify(w))+')\'>'+
+        '<div class="rname">'+w.nombres+' '+w.apellidos+'</div>'+
+        '<div class="rsub">C.I. '+w.cedula+' · '+w.cargo+'</div>'+
+        '<span class="badge '+(tieneUUID?'badge-ok':'badge-warn')+'">'+(tieneUUID?'✓ QR registrado':'⚠ Sin QR')+'</span>'+
+        '</div>';
+    }).join('');
+  }).catch(function(e){ res.innerHTML='<div class="scan-err">Error de conexión</div>'; });
+}
+
+function seleccionarUUID(wJson) {
+  var w = JSON.parse(wJson); trabajadorUUID = w;
+  document.getElementById('uuid-results').innerHTML = '';
+  var tieneUUID = w.uuid && w.uuid.toString().trim()!=='';
+  document.getElementById('uuid-worker').innerHTML =
+    '<div class="worker-name">'+w.nombres+' '+w.apellidos+'</div>'+
+    '<div class="worker-sub">C.I. '+w.cedula+' · '+w.cargo+'</div>'+
+    (tieneUUID?'<div class="worker-sub" style="margin-top:5px;font-size:11px"><b>QR actual:</b> '+w.uuid+'</div>':'')+
+    '<span class="badge '+(tieneUUID?'badge-ok':'badge-warn')+'">'+(tieneUUID?'✓ Tiene QR':'⚠ Sin QR')+'</span>';
+  document.getElementById('uuid-resultado').innerHTML = '';
+  document.getElementById('uuid-sec2').style.display = 'block';
+}
+
+function procesarUUID(uuid) {
+  var res = document.getElementById('uuid-resultado');
+  res.innerHTML = '<div class="scan-info">Guardando...</div>';
+  post({accion:'asignarUUID', fila:trabajadorUUID.fila, uuid:uuid}).then(function(r){
+    if (r.ok) {
+      res.innerHTML = '<div class="scan-ok">✓ QR asignado a <b>'+trabajadorUUID.nombres+' '+trabajadorUUID.apellidos+'</b></div>';
+      toast('QR guardado correctamente');
+    } else {
+      res.innerHTML = '<div class="scan-err">✗ '+r.msg+'</div>';
+    }
+  }).catch(function(){ res.innerHTML='<div class="scan-err">Error de conexión</div>'; });
+}
+
+// ── CHARLA ────────────────────────────────────────────
+function tabCharla(tab) {
+  var esNueva = tab==='nueva';
+  document.getElementById('charla-form').style.display = esNueva?'block':'none';
+  document.getElementById('charla-hoy-panel').style.display = esNueva?'none':'block';
+  document.getElementById('tab-nueva').classList.toggle('active', esNueva);
+  document.getElementById('tab-hoy').classList.toggle('active', !esNueva);
+  if (!esNueva) cargarCharlasHoy();
+}
+
+function crearCharla() {
+  var tema = document.getElementById('c-tema').value.trim();
+  var inst = document.getElementById('c-instructor').value.trim();
+  if (!tema) { toast('Ingresa el tema'); return; }
+  if (!inst) { toast('Ingresa el instructor'); return; }
+  post({accion:'crearCharla', datos:{
+    tipo: document.getElementById('c-tipo').value,
+    tema: tema,
+    duracion: document.getElementById('c-duracion').value,
+    lugar: document.getElementById('c-lugar').value.trim(),
+    instructor: inst,
+    aspectos: document.getElementById('c-aspectos').value.trim()
+  }}).then(function(r){
+    if (r.ok) {
+      charlaActiva = { id:r.idCharla, fecha:r.fecha,
+        tipo:document.getElementById('c-tipo').value, tema:tema,
+        duracion:document.getElementById('c-duracion').value,
+        lugar:document.getElementById('c-lugar').value.trim(), instructor:inst };
+      asistentesCharla = [];
+      mostrarPaso2Charla();
+    }
+  }).catch(function(){ toast('Error de conexión'); });
+}
+
+function cargarCharlasHoy() {
+  var el = document.getElementById('charlas-hoy-lista');
+  el.innerHTML = '<div class="scan-info">Cargando...</div>';
+  get({accion:'getCharlaHoy'}).then(function(charlas){
+    if (!charlas.length) { el.innerHTML='<div class="empty">No hay charlas hoy</div>'; return; }
+    el.innerHTML = charlas.map(function(c){
+      return '<div class="worker-card" style="cursor:pointer" onclick=\'abrirCharlaExistente('+JSON.stringify(JSON.stringify(c))+')\'>'+
+        '<div class="worker-name">'+c.tipo+'</div>'+
+        '<div class="worker-sub">'+c.tema+' · '+c.instructor+'</div>'+
+        '<span class="badge badge-in">'+c.total+' asistentes</span></div>';
+    }).join('');
+  }).catch(function(){ el.innerHTML='<div class="scan-err">Error</div>'; });
+}
+
+function abrirCharlaExistente(cJson) {
+  var c = JSON.parse(cJson); charlaActiva = c;
+  get({accion:'getAsistentes', idCharla:c.id}).then(function(lista){
+    asistentesCharla = lista; mostrarPaso2Charla();
+  }).catch(function(){ asistentesCharla=[]; mostrarPaso2Charla(); });
+}
+
+function mostrarPaso2Charla() {
+  document.getElementById('charla-p1').style.display='none';
+  document.getElementById('charla-p2').style.display='block';
+  document.getElementById('charla-info').innerHTML =
+    '<div class="card-title">'+charlaActiva.tipo+'</div>'+
+    '<div class="list-item"><div class="list-name">Tema</div><div class="list-right">'+charlaActiva.tema+'</div></div>'+
+    '<div class="list-item"><div class="list-name">Instructor</div><div class="list-right">'+charlaActiva.instructor+'</div></div>'+
+    (charlaActiva.lugar?'<div class="list-item"><div class="list-name">Lugar</div><div class="list-right">'+charlaActiva.lugar+'</div></div>':'');
+  renderAsistentes();
+}
+
+function volverCharla() {
+  cerrarScannerCharla();
+  charlaActiva=null; asistentesCharla=[];
+  document.getElementById('charla-p1').style.display='block';
+  document.getElementById('charla-p2').style.display='none';
+}
+
+function tabAsistencia(tab) {
+  var esQR = tab==='qr';
+  document.getElementById('asist-qr').style.display = esQR?'block':'none';
+  document.getElementById('asist-nom').style.display = esQR?'none':'block';
+  document.getElementById('tab-qr-c').classList.toggle('active',esQR);
+  document.getElementById('tab-nom-c').classList.toggle('active',!esQR);
+  if (!esQR) cerrarScannerCharla();
+}
+
+function procesarQRCharla(uuid) {
+  var res = document.getElementById('charla-qr-res');
+  res.innerHTML='<div class="scan-info">Buscando trabajador...</div>';
+  get({accion:'buscarPorUUID', uuid:uuid}).then(function(w){
+    if (!w) { res.innerHTML='<div class="scan-err">✗ QR no reconocido. Regístralo primero en la pestaña QR.</div>'; return; }
+    hacerAsistencia(w,'QR',res);
+  }).catch(function(){ res.innerHTML='<div class="scan-err">Error de conexión</div>'; });
+}
+
+function buscarParaCharla() {
+  var txt = document.getElementById('charla-search').value.trim();
+  var res = document.getElementById('charla-search-res');
+  if (txt.length<2) return;
+  res.innerHTML='<div class="scan-info">Buscando...</div>';
+  get({accion:'buscarTrabajadores', texto:txt}).then(function(lista){
+    if (!lista.length) { res.innerHTML='<div class="scan-err">Sin resultados</div>'; return; }
+    res.innerHTML = lista.map(function(w){
+      return '<div class="result-item" onclick=\'hacerAsistencia('+JSON.stringify(JSON.stringify(w))+',\'MANUAL\',null)\'>'+
+        '<div class="rname">'+w.nombres+' '+w.apellidos+'</div>'+
+        '<div class="rsub">'+w.cedula+' · '+w.cargo+'</div></div>';
+    }).join('');
+  }).catch(function(){ res.innerHTML='<div class="scan-err">Error</div>'; });
+}
+
+function hacerAsistencia(w, metodo, resEl) {
+  if (typeof w==='string') w=JSON.parse(w);
+  var el = resEl || document.getElementById('charla-search-res');
+  el.innerHTML='<div class="scan-info">Registrando...</div>';
+  post({accion:'registrarAsistencia', idCharla:charlaActiva.id, trabajador:w, metodo:metodo}).then(function(r){
+    if (r.ok) {
+      asistentesCharla.push({nombres:w.nombres,apellidos:w.apellidos,cargo:w.cargo,empresa:w.empresa,hora:r.hora,metodo:metodo});
+      renderAsistentes();
+      el.innerHTML='<div class="scan-ok">✓ '+w.nombres+' '+w.apellidos+' · '+r.hora+'</div>';
+      toast('✓ '+w.nombres+' registrado');
+      if (!resEl) { document.getElementById('charla-search').value=''; }
+    } else {
+      el.innerHTML='<div class="scan-err">✗ '+r.msg+'</div>';
+    }
+  }).catch(function(){ el.innerHTML='<div class="scan-err">Error de conexión</div>'; });
+}
+
+function renderAsistentes() {
+  var el = document.getElementById('lista-asistentes');
+  document.getElementById('cnt-asist').textContent='('+asistentesCharla.length+')';
+  if (!asistentesCharla.length) { el.innerHTML='<div class="empty">Nadie registrado aún</div>'; return; }
+  el.innerHTML = asistentesCharla.slice().reverse().map(function(a){
+    return '<div class="list-item">'+
+      '<div><div class="list-name">'+a.nombres+' '+a.apellidos+'</div><div class="list-sub">'+a.cargo+'</div></div>'+
+      '<div class="list-right"><span class="badge '+(a.metodo==='QR'?'badge-qr':'badge-manual')+'">'+a.metodo+'</span><br>'+a.hora+'</div>'+
+      '</div>';
+  }).join('');
+}
+
+// ── INGRESO / SALIDA ─────────────────────────────────
+function tabIngreso(tab) {
+  var esQR = tab==='qr';
+  document.getElementById('ing-qr').style.display=esQR?'block':'none';
+  document.getElementById('ing-nom').style.display=esQR?'none':'block';
+  document.getElementById('tab-qr-i').classList.toggle('active',esQR);
+  document.getElementById('tab-nom-i').classList.toggle('active',!esQR);
+  if (!esQR) cerrarScannerIngreso();
+}
+
+function procesarQRIngreso(uuid) {
+  var res = document.getElementById('ing-qr-res');
+  res.innerHTML='<div class="scan-info">Buscando...</div>';
+  get({accion:'buscarPorUUID', uuid:uuid}).then(function(w){
+    if (!w) { res.innerHTML='<div class="scan-err">✗ QR no reconocido.</div>'; return; }
+    hacerIngreso(w,'QR',res);
+  }).catch(function(){ res.innerHTML='<div class="scan-err">Error de conexión</div>'; });
+}
+
+function buscarParaIngreso() {
+  var txt = document.getElementById('ing-search').value.trim();
+  var res = document.getElementById('ing-nom-res');
+  if (txt.length<2) return;
+  res.innerHTML='<div class="scan-info">Buscando...</div>';
+  get({accion:'buscarTrabajadores', texto:txt}).then(function(lista){
+    if (!lista.length) { res.innerHTML='<div class="scan-err">Sin resultados</div>'; return; }
+    res.innerHTML = lista.map(function(w){
+      return '<div class="result-item" onclick=\'hacerIngreso('+JSON.stringify(JSON.stringify(w))+',\'MANUAL\',null)\'>'+
+        '<div class="rname">'+w.nombres+' '+w.apellidos+'</div>'+
+        '<div class="rsub">'+w.cedula+' · '+w.cargo+'</div></div>';
+    }).join('');
+  }).catch(function(){ res.innerHTML='<div class="scan-err">Error</div>'; });
+}
+
+function hacerIngreso(w, metodo, resEl) {
+  if (typeof w==='string') w=JSON.parse(w);
+  var el = resEl || document.getElementById('ing-nom-res');
+  el.innerHTML='<div class="scan-info">Registrando...</div>';
+  post({accion:'registrarIngreso', trabajador:w, metodo:metodo}).then(function(r){
+    if (r.ok) {
+      var esIng = r.tipo==='INGRESO';
+      el.innerHTML='<div class="'+(esIng?'scan-ok':'scan-info')+'">'+(esIng?'→':'←')+' <b>'+r.tipo+'</b>: '+r.nombre+' · '+r.hora+'</div>';
+      toast((esIng?'→ INGRESO':'← SALIDA')+': '+r.nombre);
+      cargarRegistrosHoy();
+      if (!resEl) document.getElementById('ing-search').value='';
+    } else {
+      el.innerHTML='<div class="scan-err">✗ '+r.msg+'</div>';
+    }
+  }).catch(function(){ el.innerHTML='<div class="scan-err">Error de conexión</div>'; });
+}
+
+function cargarRegistrosHoy() {
+  var el = document.getElementById('lista-ingresos');
+  el.innerHTML='<div class="scan-info">Cargando...</div>';
+  get({accion:'getRegistrosHoy'}).then(function(lista){
+    if (!lista.length) { el.innerHTML='<div class="empty">Sin registros hoy</div>'; return; }
+    el.innerHTML = lista.slice().reverse().map(function(r){
+      var enPlanta = !r.salida||r.salida.toString().trim()==='';
+      return '<div class="list-item">'+
+        '<div><div class="list-name">'+r.nombres+' '+r.apellidos+'</div><div class="list-sub">'+r.cargo+'</div></div>'+
+        '<div class="list-right"><div>→ '+r.ingreso+'</div>'+
+        (enPlanta?'<span class="badge badge-in" style="margin-top:2px">En planta</span>':'<div>← '+r.salida+'</div>')+
+        '</div></div>';
+    }).join('');
+  }).catch(function(){ el.innerHTML='<div class="scan-err">Error</div>'; });
+}
+
+// ── REPORTES ─────────────────────────────────────────
+function tabReporte(tab) {
+  tipoReporte=tab;
+  document.getElementById('tab-ra').classList.toggle('active',tab==='asist');
+  document.getElementById('tab-ri').classList.toggle('active',tab==='ing');
+  document.getElementById('rep-resultado').innerHTML='';
+}
+
+function hoyReporte() {
+  var hoy=new Date();
+  var iso=hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
+  document.getElementById('rep-desde').value=iso;
+  document.getElementById('rep-hasta').value=iso;
+  generarReporte();
+}
+
+function isoToDMY(s){ var p=s.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+
+function generarReporte() {
+  var desde=document.getElementById('rep-desde').value;
+  var hasta=document.getElementById('rep-hasta').value;
+  if (!desde||!hasta) { toast('Selecciona fechas'); return; }
+  var res=document.getElementById('rep-resultado');
+  res.innerHTML='<div class="scan-info">Cargando...</div>';
+  var d=isoToDMY(desde), h=isoToDMY(hasta);
+  var accion = tipoReporte==='asist'?'getReporteAsistencia':'getReporteIngresos';
+  get({accion:accion, desde:d, hasta:h}).then(function(datos){
+    if (!datos.length) { res.innerHTML='<div class="empty">Sin registros en ese período</div>'; return; }
+    var html='<div class="card"><div class="card-title">'+(tipoReporte==='asist'?'Asistencia':'Ingresos')+' · '+datos.length+' registros</div>';
+    if (tipoReporte==='asist') {
+      html+=datos.map(function(d){
+        return '<div class="list-item"><div><div class="list-name">'+d.nombres+' '+d.apellidos+'</div>'+
+          '<div class="list-sub">'+d.cargo+' · '+d.fecha+'</div></div>'+
+          '<div class="list-right"><span class="badge '+(d.metodo==='QR'?'badge-qr':'badge-manual')+'">'+d.metodo+'</span><div>'+d.hora+'</div></div></div>';
+      }).join('');
+    } else {
+      html+=datos.map(function(d){
+        var enP=!d.salida||d.salida.toString().trim()==='';
+        return '<div class="list-item"><div><div class="list-name">'+d.nombres+' '+d.apellidos+'</div>'+
+          '<div class="list-sub">'+d.cargo+' · '+d.fecha+'</div></div>'+
+          '<div class="list-right"><div>→ '+d.ingreso+'</div>'+(enP?'<span class="badge badge-warn">Sin salida</span>':'<div>← '+d.salida+'</div>')+'</div></div>';
+      }).join('');
+    }
+    html+='</div>'; res.innerHTML=html;
+  }).catch(function(){ res.innerHTML='<div class="scan-err">Error de conexión</div>'; });
+}
+
+window.onload = function(){ cargarResumen(); };
+</script>
+</body>
+</html>
