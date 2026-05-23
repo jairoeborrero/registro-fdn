@@ -323,11 +323,41 @@ var scannerUUID = null, scannerCharla = null, scannerIngreso = null;
 var charlaActiva = null, asistentesCharla = [], tipoReporte = 'asist';
 
 // ── API (solo GET para evitar CORS) ──────────────────
+// JSONP — evita bloqueos CORS de Google Apps Script
+var _cbCount = 0;
 function api(params) {
-  var qs = Object.keys(params).map(function(k){
-    return k+'='+encodeURIComponent(typeof params[k]==='object' ? JSON.stringify(params[k]) : params[k]);
-  }).join('&');
-  return fetch(API+'?'+qs).then(function(r){ return r.json(); });
+  return new Promise(function(resolve, reject) {
+    var cbName = '_cb' + (++_cbCount);
+    var timeout = setTimeout(function(){
+      delete window[cbName];
+      var s = document.getElementById(cbName);
+      if (s) s.parentNode.removeChild(s);
+      reject(new Error('Timeout'));
+    }, 15000);
+
+    window[cbName] = function(data) {
+      clearTimeout(timeout);
+      delete window[cbName];
+      var s = document.getElementById(cbName);
+      if (s) s.parentNode.removeChild(s);
+      resolve(data);
+    };
+
+    params.callback = cbName;
+    var qs = Object.keys(params).map(function(k){
+      return k+'='+encodeURIComponent(typeof params[k]==='object' ? JSON.stringify(params[k]) : params[k]);
+    }).join('&');
+
+    var script = document.createElement('script');
+    script.id = cbName;
+    script.src = API + '?' + qs;
+    script.onerror = function(){
+      clearTimeout(timeout);
+      delete window[cbName];
+      reject(new Error('Script error'));
+    };
+    document.head.appendChild(script);
+  });
 }
 
 // ── NAV ──────────────────────────────────────────────
